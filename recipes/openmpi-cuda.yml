@@ -1,0 +1,62 @@
+name: OpenMPI_Ubuntu
+description: "This is a build component to install OpenMPI 4+ and CUDA 11.3 onto Ubuntu."
+schemaVersion: 1.0
+
+phases:
+  - name: build
+    steps:
+      - name: InstallPreReq
+        action: ExecuteBash
+        inputs:
+          commands:
+            - apt-get -y install wget
+
+      - name: CreateDirectoryStructure
+        action: ExecuteBash
+        inputs:
+          commands:
+            - mkdir -p /src/
+            - mkdir -p /opt/openmpi/4.1.1
+
+      - name: DownloadOpenMPI
+        action: WebDownload
+        maxAttempts: 3
+        inputs:
+          - source: https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.1.tar.gz
+            destination: /src/openmpi-4.1.1.tar.gz
+
+      - name: InstallCuda
+        action: ExecuteBash
+        inputs:
+          commands:
+            - cd /src/
+            - wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
+            - mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+            - apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
+            - add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
+            - apt-get update
+            - apt-get -y install cuda
+            - export PATH=/usr/local/cuda-11.3/bin${PATH:+:${PATH}}
+            - export LD_LIBRARY_PATH=/usr/local/cuda-11.3/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+      - name: InstallOpenMPI
+        action: ExecuteBash
+        inputs:
+          commands:
+            - cd /src/openmpi-4.1.1.tar.gz
+            - gunzip -c openmpi-4.1.1.tar.gz | tar xf -
+            - cd openmpi-4.1.1
+            - ./configure --prefix=/opt/openmpi/4.1.1 --with-cuda=/usr/local/cuda-11.3
+            - make all install
+            - export PATH=/opt/openmpi/4.1.1/bin:$PATH
+            - export LD_LIBRARY_PATH=/opt/openmpi/4.1.1/lib:$PATH
+
+  - name: validate
+    steps:
+      - name: HelloWorldStep
+        action: ExecuteBash
+        inputs:
+          commands:
+            - which mpicc
+            - which nvcc
+            - nvcc -V
+            - mpicc --version
