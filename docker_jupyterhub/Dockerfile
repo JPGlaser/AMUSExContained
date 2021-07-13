@@ -7,24 +7,6 @@ COPY Notebook/notebook-setup.sh /usr/local/bin/notebook-setup.sh
 COPY Notebook/00-initialize.py /home/jovyan/.ipython/profile_default/startup/00-initialize.py
 
 # ----------------------------------------
-# Install OpenMPI and Append the Path Variables
-# ----------------------------------------
-RUN echo "Installing Open MPI" && \
-    export OMPI_DIR=/opt/ompi && \
-    export OMPI_VERSION=4.1.1 && \
-    export OMPI_URL="https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-$OMPI_VERSION.tar.bz2" && \
-    mkdir -p /tmp/ompi && \
-    mkdir -p /opt && \
-    cd /tmp/ompi && \
-    wget -O openmpi-$OMPI_VERSION.tar.bz2 $OMPI_URL && \
-    tar -xjf openmpi-$OMPI_VERSION.tar.bz2 && \
-    cd /tmp/ompi/openmpi-$OMPI_VERSION && \
-    ./configure --prefix=$OMPI_DIR && \
-    make -j8 install
-ENV PATH=/opt/ompi/bin:$PATH
-ENV LD_LIBRARY_PATH=/opt/ompi/lib:$LD_LIBRARY_PATH
-
-# ----------------------------------------
 # Install MKL Libraries
 # ----------------------------------------
 RUN apt update && /bin/sh -c "apt install -y intel-mkl-full libmkl-full-dev"
@@ -42,6 +24,25 @@ RUN apt update && /bin/sh -c "apt install -y tightvncserver xinit xterm dbus-x11
     pdftk libgfortran4 libgfortran5 fort77 libpng-dev" && apt clean
 
 # ----------------------------------------
+# Install OpenMPI and Append the Path Variables
+# ----------------------------------------
+RUN echo "Installing Open MPI" && \
+    export OMPI_DIR=/opt/ompi && \
+    export OMPI_VERSION=4.1.1 && \
+    export OMPI_URL="https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-$OMPI_VERSION.tar.bz2" && \
+    mkdir -p /tmp/ompi && \
+    mkdir -p /opt && \
+    cd /tmp/ompi && \
+    wget -O openmpi-$OMPI_VERSION.tar.bz2 $OMPI_URL && \
+    tar -xjf openmpi-$OMPI_VERSION.tar.bz2 && \
+    ls /tmp/ompi && ls /tmp && \
+    cd /tmp/ompi/openmpi-$OMPI_VERSION && \
+    ./configure --prefix=$OMPI_DIR && \
+    make -j8 install
+ENV PATH=/opt/ompi/bin:$PATH
+ENV LD_LIBRARY_PATH=/opt/ompi/lib:$LD_LIBRARY_PATH
+
+# ----------------------------------------
 # Install Neccessary Core Python Packages
 # [This includes necessary uninstalls to ]
 # [enable Intel MKL libraries for speed. ]
@@ -56,8 +57,7 @@ RUN conda install -y -c defaults -n base "libblas=*=*mkl" astropy bokeh bottlene
     seaborn seaborn-base yt gmp mpfr nose && \
     conda clean -y --tarballs
 RUN pip install wand marshmallow requests_oauthlib Cython \
-    corner PyYAML ruamel.yaml pytest docutils quilt nose && \
-    pip cache purge
+    corner PyYAML ruamel.yaml pytest docutils quilt nose
 RUN env MPICC=/opt/ompi/bin/mpicc pip install mpi4py
 
 # ----------------------------------------
@@ -98,6 +98,6 @@ RUN chown -R jovyan /home/jovyan && \
     chown -R jovyan:users /opt/conda && \
     chown -R jovyan:users /opt/amuse && \
     apt clean && \
-    conda clean -a && pip cache purge
+    conda clean -a
 WORKDIR /home/jovyan
 USER $NB_USER
